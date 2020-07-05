@@ -36,11 +36,11 @@ class Level(enum.Enum):
 
 def init(identifier, config_file=None, config_dict=None):
     global __logger
-    __logger = Logger(identifier)
     if config_file is not None:
         logging_config.fileConfig(config_file)
     elif config_dict is not None:
         logging_config.dictConfig(config_dict)
+    __logger = Logger(identifier)
 
 
 def __write(level, tag, msg):
