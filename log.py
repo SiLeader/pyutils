@@ -1,64 +1,69 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Android like log system.
 
-# Android like log system for Syslog.
-
-import syslog
+from logging import getLogger, config as logging_config
+import logging
 import enum
 
-__identifier = None
+__logger = None
+
+
+class Logger:
+    def __init__(self, identifier):
+        self.__identifier = identifier
+        self.__logger = getLogger(identifier)
+
+    @staticmethod
+    def __level(level):
+        return {
+            Level.Critical.value: "C",
+            Level.Error.value: "E",
+            Level.Warning.value: "W",
+            Level.Info.value: "I",
+            Level.Debug.value: "D"
+        }[level.value]
+
+    def write(self, level, tag, msg):
+        self.__logger.log(level.value, "{}: {}/{}: {}".format(self.__identifier, tag, Logger.__level(level), msg))
 
 
 class Level(enum.Enum):
-    Critical = syslog.LOG_CRIT
-    Error = syslog.LOG_ERR
-    Warning = syslog.LOG_WARNING
-    Info = syslog.LOG_INFO
-    Debug = syslog.LOG_DEBUG
+    Critical = logging.CRITICAL
+    Error = logging.ERROR
+    Warning = logging.WARNING
+    Info = logging.INFO
+    Debug = logging.DEBUG
 
 
-def init(identifier):
-    global __identifier
-
-    syslog.openlog(
-        identifier,
-        logoption=syslog.LOG_PID | syslog.LOG_PERROR,
-        facility=syslog.LOG_USER
-    )
-    __identifier = identifier
+def init(identifier, config_file=None, config_dict=None):
+    global __logger
+    __logger = Logger(identifier)
+    if config_file is not None:
+        logging_config.fileConfig(config_file)
+    elif config_dict is not None:
+        logging_config.dictConfig(config_dict)
 
 
-def __level(level):
-    return {
-        Level.Critical.value: "C",
-        Level.Error.value: "E",
-        Level.Warning.value: "W",
-        Level.Info.value: "I",
-        Level.Debug.value: "D"
-    }[level.value]
-
-
-def __message(level, tag, msg):
-    if __identifier is None:
+def __write(level, tag, msg):
+    if __logger is None:
         raise RuntimeError("log system not initialized. please call {}.init(identifier) function.".format(__name__))
-    syslog.syslog(level.value, "{}: {}/{}: {}".format(__identifier, tag, __level(level), msg))
+    __logger.write(level, tag, msg)
 
 
 def d(tag, msg):
-    __message(Level.Debug, tag, msg)
+    __write(Level.Debug, tag, msg)
 
 
 def i(tag, msg):
-    __message(Level.Info, tag, msg)
+    __write(Level.Info, tag, msg)
 
 
 def w(tag, msg):
-    __message(Level.Warning, tag, msg)
+    __write(Level.Warning, tag, msg)
 
 
 def e(tag, msg):
-    __message(Level.Error, tag, msg)
+    __write(Level.Error, tag, msg)
 
 
 def c(tag, msg):
-    __message(Level.Critical, tag, msg)
+    __write(Level.Critical, tag, msg)
